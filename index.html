@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head> 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Will You Be My Valentine?</title>
@@ -333,7 +333,7 @@
         <div class="gif-container">
             <img src="main.gif" alt="Teddy Bear GIF">
         </div>
-        <h1>Ririi, will you be my valentine?</h1>
+        <h1>Ashu, will you be my valentine?</h1>
         
         <!-- Buttons wrapper -->
         <div class="buttons-wrapper">
@@ -541,7 +541,8 @@
                     noBtn.textContent = noButtonTexts[noClickCount];
                 } else {
                     // Fourth click is "Last No" - go to page 3 immediately
-                    goToPage(3);
+                    console.log("No, Button Damaged by to much rejection &#128517;");
+                    // goToPage(3);
                     return;
                 }
                 
@@ -658,4 +659,5 @@
         }, { passive: false });
     </script>
 </body>
+
 </html>
