@@ -541,7 +541,7 @@
                     noBtn.textContent = noButtonTexts[noClickCount];
                 } else {
                     // Fourth click is "Last No" - go to page 3 immediately
-                    console.log("No, Button Damaged by to much rejection &#128517;");
+                    noBtn.style.display = "none";
                     // goToPage(3);
                     return;
                 }
@@ -661,3 +661,4 @@
 </body>
 
 </html>
+
