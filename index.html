@@ -333,7 +333,7 @@
         <div class="gif-container">
             <img src="main.gif" alt="Teddy Bear GIF">
         </div>
-        <h1>Ashu, will you be my valentine?</h1>
+        <h1>[Socho socho], will you be my valentine?</h1>
         
         <!-- Buttons wrapper -->
         <div class="buttons-wrapper">
@@ -379,7 +379,7 @@
         
         // Game variables
         let noClickCount = 0;
-        const noButtonTexts = ["No", "Really, No!", "For Real, NO!", "Last No"];
+        const noButtonTexts = ["No", "Really, No!", "For Real, NO!", "Last No &#129402;"];
         const yesButtonBaseSize = 1;
         let yesButtonSize = yesButtonBaseSize;
         let noButtonSize = 1;
@@ -541,8 +541,8 @@
                     noBtn.textContent = noButtonTexts[noClickCount];
                 } else {
                     // Fourth click is "Last No" - go to page 3 immediately
-                     noBtn.style.display = "none";
-                    // goToPage(3);
+                    // noBtn.style.display = "none";
+                     goToPage(3);
                     return;
                 }
                 
@@ -661,6 +661,7 @@
 </body>
 
 </html>
+
 
 
 
