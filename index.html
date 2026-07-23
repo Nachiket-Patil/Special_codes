@@ -1,0 +1,2887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CBT Practice Test Simulator</title>
+
+    <!-- jQuery + jQuery UI (needed for TCS iON calculator) -->
+    <script src="https://code.jquery.com/jquery-1.8.0.min.js">
+    </script>
+    <script src="https://code.jquery.com/ui/1.11.4/jquery-ui.min.js">
+    </script>
+
+    <style>
+        /* ===== GLOBAL / VARIABLES ===== */
+        :root {
+            --navy: #003366;
+            --navy-dark: #002347;
+            --blue: #1a4d8f;
+            --grey-bg: #e8e8e8;
+            --panel-bg: #f4f4f4;
+            --border: #b0b0b0;
+            --not-visited: #ffffff;
+            --not-answered: #e84545;
+            --answered: #3aa655;
+            --marked: #9b59b6;
+            --answered-marked: #9b59b6;
+            --current: #1a4d8f;
+            --text: #1c1c1c;
+            --white: #ffffff;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--grey-bg);
+            color: var(--text);
+            font-size: 14px;
+        }
+        .screen {
+            display: none;
+            min-height: 100vh;
+        }
+        .screen.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ===== SETUP SCREEN ===== */
+        #setupScreen {
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--navy-dark), var(--navy) 60%, var(--blue));
+            padding: 24px;
+        }
+        .setup-card {
+            background: var(--white);
+            width: 100%;
+            max-width: 560px;
+            border-radius: 4px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+            overflow: hidden;
+        }
+        .setup-header {
+            background: var(--navy);
+            color: var(--white);
+            padding: 16px 24px;
+            border-bottom: 4px solid #f5a623;
+        }
+        .setup-header h1 {
+            margin: 0;
+            font-size: 19px;
+            letter-spacing: 0.5px;
+        }
+        .setup-header p {
+            margin: 4px 0 0;
+            font-size: 12px;
+            color: #cfe0f5;
+        }
+        .setup-body {
+            padding: 24px;
+        }
+        .field-group {
+            margin-bottom: 18px;
+        }
+        .field-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 6px;
+            color: var(--navy-dark);
+        }
+        .field-hint {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+        }
+        .field-group input[type="text"],
+        .field-group input[type="number"] {
+            width: 100%;
+            padding: 9px 10px;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            font-size: 14px;
+        }
+        .field-group input:focus {
+            outline: 2px solid var(--blue);
+            border-color: var(--blue);
+        }
+        .time-mode-row {
+            display: flex;
+            gap: 18px;
+            margin-bottom: 10px;
+        }
+        .time-mode-row label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: normal;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .time-input-wrap {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        .time-input-wrap .field-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        #timedFields {
+            display: none;
+            margin-top: 10px;
+        }
+        #timedFields.show {
+            display: flex;
+        }
+        .setup-actions {
+            margin-top: 22px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        .btn {
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 10px 22px;
+            border-radius: 3px;
+            border: none;
+            cursor: pointer;
+            transition: filter 0.15s;
+        }
+        .btn:hover {
+            filter: brightness(1.08);
+        }
+        .btn:active {
+            filter: brightness(0.95);
+        }
+        .btn-primary {
+            background: var(--navy);
+            color: #fff;
+        }
+        .btn-secondary {
+            background: #ddd;
+            color: #333;
+        }
+        .btn-danger {
+            background: var(--not-answered);
+            color: #fff;
+        }
+        .btn-success {
+            background: var(--answered);
+            color: #fff;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .setup-error {
+            color: var(--not-answered);
+            font-size: 12px;
+            margin-top: 6px;
+            min-height: 14px;
+        }
+
+        /* ===== READY SCREEN ===== */
+        #readyScreen {
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--navy-dark), var(--navy) 60%, var(--blue));
+            padding: 24px;
+        }
+        .ready-card {
+            background: var(--white);
+            width: 100%;
+            max-width: 480px;
+            border-radius: 4px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+            padding: 30px 28px;
+            text-align: center;
+        }
+        .ready-card h2 {
+            margin-top: 0;
+            color: var(--navy-dark);
+        }
+        .ready-summary {
+            text-align: left;
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 14px 16px;
+            margin: 18px 0;
+            font-size: 13px;
+        }
+        .ready-summary div {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+        }
+        .ready-summary div span:first-child {
+            color: #555;
+        }
+        .ready-summary div span:last-child {
+            font-weight: bold;
+            color: var(--navy-dark);
+        }
+
+        /* ===== EXAM SCREEN ===== */
+        #examScreen {
+            display: none;
+            flex-direction: column;
+            height: 100vh;
+        }
+        #examScreen.active {
+            display: flex;
+        }
+        .exam-topbar {
+            background: var(--navy);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 16px;
+            flex-shrink: 0;
+            border-bottom: 3px solid #f5a623;
+        }
+        .exam-topbar .brand {
+            font-weight: bold;
+            font-size: 15px;
+        }
+        .exam-topbar .candidate-name {
+            font-size: 12px;
+            color: #cfe0f5;
+        }
+        .exam-topbar .timer-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .timer-display {
+            background: #fff;
+            color: var(--navy-dark);
+            font-weight: bold;
+            font-size: 15px;
+            padding: 5px 12px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            min-width: 90px;
+            text-align: center;
+        }
+        .timer-display.warning {
+            background: #ffe082;
+            color: #7a4a00;
+        }
+        .timer-display.danger {
+            background: #ffcdd2;
+            color: #b71c1c;
+            animation: pulseTimer 1s infinite;
+        }
+        @keyframes pulseTimer {
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.6;
+            }
+        }
+        .calc-icon-btn {
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            padding: 5px 9px;
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+        }
+        .calc-icon-btn:hover {
+            background: #f0f0f0;
+        }
+        .exam-subbar {
+            background: #d9e4f0;
+            border-bottom: 1px solid var(--border);
+            padding: 6px 16px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .exam-subbar .qtype-badge {
+            font-weight: bold;
+            color: var(--navy-dark);
+        }
+        .exam-main {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        .question-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            overflow-y: auto;
+            border-right: 1px solid var(--border);
+        }
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            border-bottom: 1px solid #ddd;
+            background: #fafafa;
+        }
+        .question-header .qnum {
+            font-weight: bold;
+            font-size: 15px;
+            color: var(--navy-dark);
+        }
+        .question-body {
+            padding: 20px;
+            flex: 1;
+        }
+        .question-text {
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 24px;
+            font-weight: bold;
+            color: #111;
+        }
+        .options-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        .option-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            cursor: pointer;
+            background: #fcfcfc;
+        }
+        .option-item:hover {
+            background: #eef3fa;
+            border-color: var(--blue);
+        }
+        .option-item.selected {
+            background: #dbe9fb;
+            border-color: var(--blue);
+        }
+        .option-item input {
+            margin-top: 3px;
+            cursor: pointer;
+        }
+        .option-item .opt-label {
+            font-weight: bold;
+            color: var(--navy-dark);
+            min-width: 20px;
+        }
+        .option-item .opt-text {
+            flex: 1;
+        }
+        .numerical-pad {
+            margin-top: 10px;
+        }
+        .numerical-input-display {
+            font-size: 20px;
+            font-family: 'Courier New', monospace;
+            border: 2px solid var(--blue);
+            border-radius: 3px;
+            padding: 10px 14px;
+            width: 260px;
+            margin-bottom: 14px;
+            background: #fff;
+            min-height: 24px;
+        }
+        .numpad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 56px);
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .numpad-grid button {
+            font-size: 17px;
+            font-weight: bold;
+            padding: 12px 0;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            background: #fff;
+            cursor: pointer;
+        }
+        .numpad-grid button:hover {
+            background: #eef3fa;
+        }
+        .numpad-extra {
+            display: flex;
+            gap: 8px;
+        }
+        .numpad-extra button {
+            font-size: 13px;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            background: #f0f0f0;
+            cursor: pointer;
+        }
+        .numpad-extra button:hover {
+            background: #e0e0e0;
+        }
+        .numerical-hint {
+            font-size: 11px;
+            color: #777;
+            margin-top: 6px;
+        }
+        .question-actions {
+            display: flex;
+            gap: 10px;
+            padding: 14px 20px;
+            border-top: 1px solid #ddd;
+            background: #fafafa;
+            flex-wrap: wrap;
+        }
+        .nav-panel {
+            width: 300px;
+            background: var(--panel-bg);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            overflow-y: auto;
+        }
+        .nav-panel-header {
+            padding: 10px 14px;
+            background: #dde6f0;
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-panel-header .label {
+            font-weight: bold;
+            font-size: 12px;
+            color: var(--navy-dark);
+        }
+        .legend {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            padding: 10px 14px;
+            font-size: 10.5px;
+            border-bottom: 1px solid var(--border);
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .legend-swatch {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            border: 1px solid #999;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+            color: #fff;
+            flex-shrink: 0;
+        }
+        .swatch-not-visited {
+            background: #fff;
+            color: #333;
+            border: 1px solid #999;
+        }
+        .swatch-not-answered {
+            background: var(--not-answered);
+        }
+        .swatch-answered {
+            background: var(--answered);
+        }
+        .swatch-marked {
+            background: var(--marked);
+        }
+        .swatch-answered-marked {
+            background: var(--marked);
+            position: relative;
+        }
+        .qgrid-wrap {
+            padding: 12px 14px;
+            flex: 1;
+        }
+        .qgrid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+        }
+        .qbtn {
+            position: relative;
+            aspect-ratio: 1;
+            border: 1px solid #999;
+            border-radius: 3px;
+            background: #fff;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .qbtn.st-not-answered {
+            background: var(--not-answered);
+            color: #fff;
+            border-color: var(--not-answered);
+        }
+        .qbtn.st-answered {
+            background: var(--answered);
+            color: #fff;
+            border-color: var(--answered);
+        }
+        .qbtn.st-marked {
+            background: var(--marked);
+            color: #fff;
+            border-color: var(--marked);
+        }
+        .qbtn.st-answered-marked {
+            background: var(--marked);
+            color: #fff;
+            border-color: var(--marked);
+        }
+        .qbtn.st-answered-marked::after {
+            content: "\2713";
+            position: absolute;
+            bottom: 1px;
+            right: 3px;
+            font-size: 8px;
+            color: #c8ffd4;
+        }
+        .qbtn.current {
+            outline: 3px solid #f5a623;
+            outline-offset: 1px;
+        }
+        .candidate-box {
+            padding: 12px 14px;
+            border-top: 1px solid var(--border);
+            font-size: 12px;
+            background: #dde6f0;
+        }
+        .candidate-box .name {
+            font-weight: bold;
+            color: var(--navy-dark);
+        }
+        .submit-bar {
+            padding: 12px 14px;
+            border-top: 1px solid var(--border);
+        }
+        .submit-bar button {
+            width: 100%;
+        }
+        .clock-modal {
+            position: fixed;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #fff;
+            border: 2px solid var(--navy);
+            border-radius: 30px;
+            padding: 8px 22px;
+            font-family: 'Courier New', monospace;
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--navy-dark);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+            display: none;
+            z-index: 999;
+        }
+
+        /* ===== REVIEW SCREEN ===== */
+        #reviewScreen {
+            align-items: center;
+            background: var(--grey-bg);
+            padding: 24px;
+            overflow-y: auto;
+        }
+        .review-card {
+            background: #fff;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            border-radius: 4px;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        .review-header {
+            background: var(--navy);
+            color: #fff;
+            padding: 18px 26px;
+            border-bottom: 4px solid #f5a623;
+        }
+        .review-header h1 {
+            margin: 0;
+            font-size: 20px;
+        }
+        .review-body {
+            padding: 26px;
+        }
+        .review-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+        .stat-box {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 14px;
+            text-align: center;
+        }
+        .stat-box .stat-value {
+            font-size: 22px;
+            font-weight: bold;
+            color: var(--navy-dark);
+        }
+        .stat-box .stat-label {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+        }
+        table.review-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-bottom: 20px;
+        }
+        table.review-table th,
+        table.review-table td {
+            border: 1px solid var(--border);
+            padding: 7px 8px;
+            text-align: center;
+        }
+        table.review-table th {
+            background: var(--navy);
+            color: #fff;
+        }
+        table.review-table tr:nth-child(even) {
+            background: #f6f6f6;
+        }
+        table.review-table td.q-no {
+            font-weight: bold;
+        }
+        .review-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        @media (max-width: 900px) {
+            .review-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width: 800px) {
+            .exam-main {
+                flex-direction: column;
+            }
+            .nav-panel {
+                width: 100%;
+                order: 2;
+            }
+            .question-pane {
+                order: 1;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+        }
+
+        /* ===== TCS iON SCIENTIFIC CALCULATOR – EXACT SOURCE ===== */
+        #calcModal {
+            display: none;
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            z-index: 2000;
+            font-family: Arial, sans-serif;
+        }
+        #calcModal.show {
+            display: block;
+        }
+        #calcTitlebar {
+            background: #4286f3;
+            color: #fff;
+            padding: 7px 10px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 5px 5px 0 0;
+            user-select: none;
+        }
+        #calcTitlebar .tcs-close {
+            background: #c0392b;
+            border: 1px solid #922b21;
+            border-radius: 3px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            padding: 1px 7px;
+            line-height: 1.4;
+        }
+        #calcTitlebar .tcs-close:hover {
+            background: #e74c3c;
+        }
+        .calc_container {
+            background: #dadada;
+            border: 1px solid #aaa;
+            border-radius: 0 0 5px 5px;
+            box-shadow: 0 0 15px 0 rgba(0, 0, 0, 0.1) inset;
+            padding: 0px;
+            width: 463px;
+            border-bottom: 7px solid #999;
+            position: relative;
+        }
+        .calc_row {
+            display: block;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+        #keyPad a {
+            background: #f1f1f1;
+            border-color: #aaa;
+            border-image: none;
+            border-radius: 4px;
+            border-style: solid;
+            border-width: 1px 1px 3px;
+            color: #444;
+            cursor: pointer;
+            float: left;
+            font-size: 12px;
+            font-weight: bold;
+            height: 25px;
+            line-height: 20px;
+            margin-right: 5px;
+            text-align: center;
+            text-decoration: none;
+            vertical-align: middle;
+            width: 35px;
+        }
+        #keyPad a.min {
+            font-size: 10.5px;
+        }
+        #keyPad a.last {
+            margin-right: 0px;
+        }
+        #keyPad a:active {
+            position: relative;
+            height: 25px;
+            border-bottom: 1px solid #aaa;
+        }
+        #keyPad a:hover {
+            background: #eaeaea;
+        }
+        .text_container {
+            display: inline;
+        }
+        .memoryhide {
+            visibility: hidden;
+            position: absolute;
+            top: 52px;
+            right: 429px;
+            bottom: 0;
+            opacity: 0;
+            transition: opacity 1s, visibility, 1s;
+        }
+        .memoryshow {
+            visibility: visible;
+            opacity: 1;
+        }
+        .keyPad_TextBox,
+        .keyPad_TextBox1 {
+            background: #fff;
+            border-color: #aaa;
+            border-image: none;
+            border-radius: 3px;
+            border-style: solid;
+            border-width: 1px 1px 3px;
+            font-size: 20px;
+            height: 30px;
+            line-height: 30px;
+            text-align: right;
+            text-indent: 10px;
+            vertical-align: middle;
+            width: 434px;
+            float: left;
+            margin-bottom: 7px;
+            padding-right: 5px;
+        }
+        .degree_radian {
+            float: left;
+            height: 25px;
+            width: 80px;
+            display: inline-block;
+            font-size: 9px;
+            margin-top: 4px;
+            vertical-align: middle;
+        }
+        #keyPad_btnDot {
+            width: 35px !important;
+        }
+        #keyPad_btn0 {
+            width: 76px !important;
+        }
+        .calc_arrows {
+            font-size: 24px !important;
+        }
+        #keyPad #keyPad_btnEnter {
+            background: #2ecc71;
+            border-color: #27ae60;
+            bottom: 17px;
+            color: #fff;
+            font-size: 20px;
+            line-height: 47px;
+            right: 10px;
+            width: 35px;
+            height: 53px;
+            position: absolute;
+            FONT-SIZE: 20px;
+        }
+        #keyPad #keyPad_btnClr,
+        #keyPad #keyPad_btnInverseSign,
+        #keyPad #keyPad_btnAllClr {
+            background: #e74c3c;
+            color: #fff;
+            border-color: #c0392b;
+            width: 35px !important;
+        }
+        #keyPad #keyPad_btnBack {
+            background: #e74c3c;
+            color: #fff;
+            border-color: #c0392b;
+            width: 76px !important;
+        }
+        #keyPad #keyPad_btnSquare,
+        #keyPad #keyPad_btnCube,
+        #keyPad #keyPad_btnExp,
+        #keyPad #keyPad_btnYpowX {
+            font-size: 12px;
+        }
+        .clear {
+            clear: both;
+        }
+        .superscript,
+        .subscript {
+            font-size: 0.7em;
+            position: relative;
+            top: -0.5em;
+        }
+        .subscript {
+            top: 0.5em;
+        }
+        #mainContentArea {
+            margin-top: 0px;
+            padding: 10px;
+        }
+        .left_sec {
+            float: left;
+        }
+        .right_sec {
+            float: left;
+            height: 180px;
+        }
+        #keyPad_Help {
+            color: #000;
+            background: url('../images/Sprite.png') no-repeat -22px -8px;
+            width: 54px;
+            height: 25px;
+            padding: 1px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            line-height: 20px;
+            position: absolute;
+            right: 79px;
+            text-align: center;
+            top: 7px;
+        }
+        #keyPad_Help:hover {
+            background: url('../images/Sprite.png') no-repeat -82px -8px;
+            width: 54px;
+            height: 25px;
+        }
+        #keyPad_Helpback {
+            color: #000;
+            background: url('../images/Sprite.png') no-repeat -22px -43px;
+            width: 54px;
+            height: 25px;
+            padding: 1px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            line-height: 20px;
+            position: absolute;
+            right: 79px;
+            text-align: center;
+            top: 7px;
+        }
+        #keyPad_Helpback:hover {
+            background: url('../images/Sprite.png') no-repeat -82px -43px;
+            width: 54px;
+            height: 25px;
+        }
+        .calc_min {
+            background: url('../images/Sprite.png') no-repeat -146px -26px;
+            width: 16px;
+            height: 3px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            line-height: 25px;
+            position: absolute;
+            right: 42px;
+            text-align: center;
+            top: 25px;
+        }
+        .calc_max {
+            background: url('../images/Sprite.png') no-repeat -175px -13px;
+            width: 16px;
+            height: 16px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            line-height: 25px;
+            position: absolute;
+            right: 42px;
+            text-align: center;
+            top: 12px;
+        }
+        .hide {
+            display: none;
+        }
+        .reduceWidth {
+            width: 200px !important;
+        }
+        .reduceHeader {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: pre;
+            width: 74px !important;
+        }
+        #keyPad_btnEnter:active {
+            position: absolute !important;
+            bottom: 17px !important;
+        }
+        #helpContent {
+            height: 263px;
+            margin-right: 6px;
+            overflow: auto;
+            padding: 10px;
+        }
+        #helptopDiv {
+            margin-bottom: 5px;
+            padding: 10px;
+            background-color: #4286f3;
+            color: #ffffff;
+        }
+        #keyPad_Help,
+        #keyPad_Helpback {
+            /* float: right !important; */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ========== SCREEN 1: SETUP ========== -->
+    <div id="setupScreen" class="screen active">
+        <div class="setup-card">
+            <div class="setup-header">
+                <h1>CBT Practice Test Simulator</h1>
+                <p>Offline mock-test engine &mdash; configure your test</p>
+            </div>
+            <div class="setup-body">
+                <div class="field-group">
+                    <label for="numQuestions">Total number of questions</label>
+                    <input type="number" id="numQuestions" min="1" max="500" placeholder="e.g. 25" />
+                </div>
+                <div class="field-group">
+                    <label>Timer mode</label>
+                    <div class="time-mode-row">
+                        <label><input type="radio" name="timeMode" value="clock" checked /> No fixed time (show running clock)</label>
+                        <label><input type="radio" name="timeMode" value="timed" /> Set a maximum time (countdown)</label>
+                    </div>
+                    <div id="timedFields">
+                        <div class="time-input-wrap">
+                            <div class="field-group">
+                                <label for="maxHours">Hours</label>
+                                <input type="number" id="maxHours" min="0" max="23" value="0" />
+                            </div>
+                            <div class="field-group">
+                                <label for="maxMinutes">Minutes</label>
+                                <input type="number" id="maxMinutes" min="0" max="59" value="30" />
+                            </div>
+                            <div class="field-group">
+                                <label for="maxSeconds">Seconds</label>
+                                <input type="number" id="maxSeconds" min="0" max="59" value="0" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field-hint">If you don't set a maximum time, a stopwatch-style digital clock will count up from zero once the test starts.</div>
+                </div>
+                <div class="setup-error" id="setupError"></div>
+                <div class="setup-actions">
+                    <button class="btn btn-primary" id="setupNextBtn">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== SCREEN 2: READY ========== -->
+    <div id="readyScreen" class="screen">
+        <div class="ready-card">
+            <h2>Almost there</h2>
+            <div class="field-group" style="text-align:left;">
+                <label for="testName">Name of this test</label>
+                <input type="text" id="testName" placeholder="e.g. Mock Test 1 - Chapter 5" />
+            </div>
+            <div class="ready-summary" id="readySummary"></div>
+            <div class="setup-error" id="readyError"></div>
+            <div style="display:flex;gap:10px;justify-content:center;">
+                <button class="btn btn-secondary" id="readyBackBtn">Back</button>
+                <button class="btn btn-primary" id="readyBeginBtn">I am ready to begin</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== SCREEN 3: EXAM ========== -->
+    <div id="examScreen" class="screen">
+        <div class="exam-topbar">
+            <div>
+                <span class="brand">CBT Practice Test Simulator</span>
+                <span class="candidate-name" id="topbarTestName"></span>
+            </div>
+            <div class="timer-box">
+                <button class="calc-icon-btn" id="calcOpenBtn" title="Scientific Calculator">&#128290;&#65039; Calc</button>
+                <span id="timerLabel" style="font-size:11px;color:#cfe0f5;"></span>
+                <span class="timer-display" id="timerDisplay">00:00:00</span>
+            </div>
+        </div>
+        <div class="exam-subbar">
+            <span class="qtype-badge" id="qTypeBadge">Question Type: MCQ</span>
+            <span id="qProgressLabel">Question 1 of 1</span>
+        </div>
+        <div class="exam-main">
+            <div class="question-pane">
+                <div class="question-header">
+                    <span class="qnum" id="qNumHeader">Question No. 1</span>
+                </div>
+                <div class="question-body">
+                    <div class="question-text" id="questionText">What is correct answer for question '#1'?</div>
+                    <ul class="options-list" id="mcqOptionsList" style="display:none;"></ul>
+                    <div class="numerical-pad" id="numericalPad" style="display:none;">
+                        <div class="numerical-input-display" id="numericalDisplay">&nbsp;</div>
+                        <div class="numpad-grid" id="numpadGrid"></div>
+                        <div class="numpad-extra">
+                            <button type="button" id="numBackspace">&#9003; Backspace</button>
+                            <button type="button" id="numClear">Clear</button>
+                        </div>
+                        <div class="numerical-hint">You can also type the answer directly using your keyboard.</div>
+                    </div>
+                </div>
+                <div class="question-actions">
+                    <button class="btn btn-secondary" id="clearResponseBtn">Clear Response</button>
+                    <button class="btn" id="markReviewBtn" style="background:var(--marked);color:#fff;">Mark for Review &amp; Next</button>
+                    <button class="btn btn-success" id="saveNextBtn">Save &amp; Next</button>
+                    <span style="flex:1;"></span>
+                    <button class="btn btn-secondary" id="prevBtn">&laquo; Previous</button>
+                </div>
+            </div>
+            <div class="nav-panel">
+                <div class="nav-panel-header"><span class="label">CANDIDATE / TEST STATUS</span></div>
+                <div class="legend">
+                    <div class="legend-item"><span class="legend-swatch swatch-not-visited">0</span> Not Visited</div>
+                    <div class="legend-item"><span class="legend-swatch swatch-not-answered">0</span> Not Answered</div>
+                    <div class="legend-item"><span class="legend-swatch swatch-answered">0</span> Answered</div>
+                    <div class="legend-item"><span class="legend-swatch swatch-marked">0</span> Marked for Review</div>
+                    <div class="legend-item" style="grid-column:1 / span 2;"><span class="legend-swatch swatch-answered-marked">&#10003;</span> Answered &amp; Marked for Review (will be considered for evaluation)</div>
+                </div>
+                <div class="qgrid-wrap">
+                    <div class="qgrid" id="qGrid"></div>
+                </div>
+                <div class="candidate-box">
+                    <div class="name" id="sideTestName">Test</div>
+                    <div id="sideQuestionCount"></div>
+                </div>
+                <div class="submit-bar">
+                    <button class="btn btn-danger" id="endTestBtn">End Test / Submit</button>
+                </div>
+            </div>
+        </div>
+        <div class="clock-modal" id="clockModal">00:00:00</div>
+
+        <!-- ===== TCS iON SCIENTIFIC CALCULATOR – exact HTML ===== -->
+        <div id="calcModal">
+            <div id="calcTitlebar">
+                <span>Scientific Calculator</span>
+                <button class="tcs-close" id="calcCloseBtn">&times;</button>
+            </div>
+            <div id="keyPad" class="ui-widget-content calc_container" style="border-radius:0 0 5px 5px;position:relative;">
+                <div id="mainContentArea">
+                    <input type="text" id="keyPad_UserInput1" class="keyPad_TextBox1" readonly="" />
+                    <div class="text_container">
+                        <input type="text" id="keyPad_UserInput" class="keyPad_TextBox" maxlength="30" readonly="" />
+                        <span id="memory" class="memoryhide"><font size="2">M</font></span>
+                    </div>
+                    <div class="clear"></div>
+                    <div class="left_sec">
+                        <div class="calc_row clear">
+                            <a href="#nogo" id="keyPad_btnMod" class="keyPad_btnBinaryOp">mod</a>
+                            <div class="degree_radian">
+                                <input type="radio" name="degree_or_radian" value="deg" checked="checked" />Deg
+                                <input type="radio" name="degree_or_radian" value="rad" />Rad
+                            </div>
+                            <a href="#nogo" id="keyPad_MC" class="keyPad_btnMemoryOp">MC</a>
+                            <a href="#nogo" id="keyPad_MR" class="keyPad_btnMemoryOp">MR</a>
+                            <a href="#nogo" id="keyPad_MS" class="keyPad_btnMemoryOp">MS</a>
+                            <a href="#nogo" id="keyPad_M+" class="keyPad_btnMemoryOp">M+</a>
+                            <a href="#nogo" id="keyPad_M-" class="keyPad_btnMemoryOp">M-</a>
+                        </div>
+                        <div class="calc_row clear">
+                            <a href="#nogo" id="keyPad_btnSinH" class="keyPad_btnUnaryOp min">sinh</a>
+                            <a href="#nogo" id="keyPad_btnCosinH" class="keyPad_btnUnaryOp min">cosh</a>
+                            <a href="#nogo" id="keyPad_btnTgH" class="keyPad_btnUnaryOp min">tanh</a>
+                            <a href="#nogo" id="keyPad_EXP" class="keyPad_btnBinaryOp">Exp</a>
+                            <a href="#nogo" id="keyPad_btnOpen" class="keyPad_btnBinaryOp">(</a>
+                            <a href="#nogo" id="keyPad_btnClose" class="keyPad_btnBinaryOp">)</a>
+                            <a href="#nogo" id="keyPad_btnBack" class="keyPad_btnCommand calc_arrows"><div style="position:relative;top:-3px">&#8592;</div></a>
+                            <a href="#nogo" id="keyPad_btnAllClr" class="keyPad_btnCommand">C</a>
+                            <a href="#nogo" id="keyPad_btnInverseSign" class="keyPad_btnUnaryOp">+/-</a>
+                            <a href="#nogo" id="keyPad_btnSquareRoot" class="keyPad_btnUnaryOp"><div style="position:relative;top:1px">&#8730;</div></a>
+                        </div>
+                        <div class="calc_row clear" style="margin-top:5px;">
+                            <a href="#nogo" id="keyPad_btnAsinH" class="keyPad_btnUnaryOp min"><span class="baseele">sinh</span><span class="superscript">-1</span></a>
+                            <a href="#nogo" id="keyPad_btnAcosH" class="keyPad_btnUnaryOp min"><span class="baseele">cosh</span><span class="superscript">-1</span></a>
+                            <a href="#nogo" id="keyPad_btnAtanH" class="keyPad_btnUnaryOp min"><span class="baseele">tanh</span><span class="superscript">-1</span></a>
+                            <a href="#nogo" id="keyPad_btnLogBase2" class="keyPad_btnUnaryOp"><span class="baseele">log</span><span class="subscript">2</span><span class="baseele">x</span></a>
+                            <a href="#nogo" id="keyPad_btnLn" class="keyPad_btnUnaryOp">ln</a>
+                            <a href="#nogo" id="keyPad_btnLg" class="keyPad_btnUnaryOp">log</a>
+                            <a href="#nogo" id="keyPad_btn7" class="keyPad_btnNumeric">7</a>
+                            <a href="#nogo" id="keyPad_btn8" class="keyPad_btnNumeric">8</a>
+                            <a href="#nogo" id="keyPad_btn9" class="keyPad_btnNumeric">9</a>
+                            <a href="#nogo" id="keyPad_btnDiv" class="keyPad_btnBinaryOp">/</a>
+                            <a href="#nogo" id="keyPad_%" class="keyPad_btnBinaryOp">%</a>
+                        </div>
+                        <div class="calc_row clear">
+                            <a href="#nogo" id="keyPad_btnPi" class="keyPad_btnConst">&#960;</a>
+                            <a href="#nogo" id="keyPad_btnE" class="keyPad_btnConst">e</a>
+                            <a href="#nogo" id="keyPad_btnFact" class="keyPad_btnUnaryOp">n!</a>
+                            <a href="#nogo" id="keyPad_btnYlogX" class="keyPad_btnBinaryOp"><span class="baseele">log</span><span class="subscript">y</span><span class="baseele">x</span></a>
+                            <a href="#nogo" id="keyPad_btnExp" class="keyPad_btnUnaryOp"><span class="baseele">e</span><span class="superscript">x</span></a>
+                            <a href="#nogo" id="keyPad_btn10X" class="keyPad_btnUnaryOp"><span class="baseele">10</span><span class="superscript">x</span></a>
+                            <a href="#nogo" id="keyPad_btn4" class="keyPad_btnNumeric">4</a>
+                            <a href="#nogo" id="keyPad_btn5" class="keyPad_btnNumeric">5</a>
+                            <a href="#nogo" id="keyPad_btn6" class="keyPad_btnNumeric">6</a>
+                            <a href="#nogo" id="keyPad_btnMult" class="keyPad_btnBinaryOp"><div style="position:relative;top:3px;font-size:20px">*</div></a>
+                            <a href="#nogo" id="keyPad_btnInverse" class="keyPad_btnUnaryOp"><span class="baseele">1/x</span></a>
+                        </div>
+                        <div class="calc_row clear">
+                            <a href="#nogo" id="keyPad_btnSin" class="keyPad_btnUnaryOp min">sin</a>
+                            <a href="#nogo" id="keyPad_btnCosin" class="keyPad_btnUnaryOp min">cos</a>
+                            <a href="#nogo" id="keyPad_btnTg" class="keyPad_btnUnaryOp min">tan</a>
+                            <a href="#nogo" id="keyPad_btnYpowX" class="keyPad_btnBinaryOp"><span class="baseele">x</span><span class="superscript">y</span></a>
+                            <a href="#nogo" id="keyPad_btnCube" class="keyPad_btnUnaryOp"><span class="baseele">x</span><span class="superscript">3</span></a>
+                            <a href="#nogo" id="keyPad_btnSquare" class="keyPad_btnUnaryOp"><span class="baseele">x</span><span class="superscript">2</span></a>
+                            <a href="#nogo" id="keyPad_btn1" class="keyPad_btnNumeric">1</a>
+                            <a href="#nogo" id="keyPad_btn2" class="keyPad_btnNumeric">2</a>
+                            <a href="#nogo" id="keyPad_btn3" class="keyPad_btnNumeric">3</a>
+                            <a href="#nogo" id="keyPad_btnMinus" class="keyPad_btnBinaryOp"><div style="position:relative;top:-1px;font-size:20px">-</div></a>
+                        </div>
+                        <div class="calc_row clear">
+                            <a href="#nogo" id="keyPad_btnAsin" class="keyPad_btnUnaryOp min"><span class="baseele">sin</span><span class="superscript">-1</span></a>
+                            <a href="#nogo" id="keyPad_btnAcos" class="keyPad_btnUnaryOp min"><span class="baseele">cos</span><span class="superscript">-1</span></a>
+                            <a href="#nogo" id="keyPad_btnAtan" class="keyPad_btnUnaryOp min"><span class="baseele">tan</span><span class="superscript">-1</span></a>
+                            <a href="#nogo" id="keyPad_btnYrootX" class="keyPad_btnBinaryOp"><span class="superscript" style="top:-8px;">y</span><span class="baseele" style="font-size:1.2em;margin:-6px 0 0 -9px;">&#8730;x</span></a>
+                            <a href="#nogo" id="keyPad_btnCubeRoot" class="keyPad_btnUnaryOp"><font size="3">&#8731; </font></a>
+                            <a href="#nogo" id="keyPad_btnAbs" class="keyPad_btnUnaryOp"><span class="baseele">|x|</span></a>
+                            <a href="#nogo" id="keyPad_btn0" class="keyPad_btnNumeric">0</a>
+                            <a href="#nogo" id="keyPad_btnDot" class="keyPad_btnNumeric">.</a>
+                            <a href="#nogo" id="keyPad_btnPlus" class="keyPad_btnBinaryOp">+</a>
+                            <a href="#nogo" id="keyPad_btnEnter" class="keyPad_btnCommand"><div style="margin-bottom:2px">=</div></a>
+                        </div>
+                    </div>
+                    <div class="clear"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== SCREEN 4: REVIEW ========== -->
+    <div id="reviewScreen" class="screen">
+        <div class="review-card">
+            <div class="review-header">
+                <h1 id="reviewTestName">Test Review</h1>
+            </div>
+            <div class="review-body">
+                <div class="review-stats">
+                    <div class="stat-box"><div class="stat-value" id="statTotalQ">0</div><div class="stat-label">Total Questions</div></div>
+                    <div class="stat-box"><div class="stat-value" id="statAnswered">0</div><div class="stat-label">Answered</div></div>
+                    <div class="stat-box"><div class="stat-value" id="statMarked">0</div><div class="stat-label">Marked for Review</div></div>
+                    <div class="stat-box"><div class="stat-value" id="statTotalTime">0</div><div class="stat-label">Total Time Taken</div></div>
+                </div>
+                <table class="review-table" id="reviewTable">
+                    <thead>
+                        <tr>
+                            <th>Question No.</th>
+                            <th>My Response</th>
+                            <th>Question Type</th>
+                            <th>Answered?</th>
+                            <th>Marked for Review</th>
+                            <th>Explored</th>
+                            <th>Time Taken</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reviewTableBody"></tbody>
+                </table>
+                <div class="review-actions">
+                    <button class="btn btn-secondary" id="downloadCsvBtn">Download Review (CSV)</button>
+                    <button class="btn btn-primary" id="downloadXlsBtn">Download Review (Excel .xls)</button>
+                    <button class="btn btn-secondary" id="restartBtn">Start New Test</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* =============================================================
+           EXAM LOGIC – pure vanilla JS (no jQuery)
+           ============================================================= */
+        (function() {
+            "use strict";
+
+            // -------- UTILITY --------
+            function el(id) { return document.getElementById(id); }
+
+            function clampInt(v, min, max) {
+                v = parseInt(v, 10);
+                if (isNaN(v)) return min;
+                if (v < min) return min;
+                if (v > max) return max;
+                return v;
+            }
+
+            function formatHMS(totalSeconds) {
+                totalSeconds = Math.max(0, Math.round(totalSeconds));
+                var h = Math.floor(totalSeconds / 3600);
+                var m = Math.floor((totalSeconds % 3600) / 60);
+                var s = totalSeconds % 60;
+
+                function pad(n) { return n < 10 ? "0" + n : "" + n; }
+                return pad(h) + ":" + pad(m) + ":" + pad(s);
+            }
+
+            function formatHumanTime(totalSeconds) {
+                totalSeconds = Math.max(0, Math.round(totalSeconds));
+                if (totalSeconds === 0) return "0 sec";
+                var h = Math.floor(totalSeconds / 3600);
+                var m = Math.floor((totalSeconds % 3600) / 60);
+                var s = totalSeconds % 60;
+                var parts = [];
+                if (h > 0) parts.push(h + "h");
+                if (m > 0) parts.push(m + "min");
+                if (s > 0 || parts.length === 0) parts.push(s + "sec");
+                return parts.join(" ");
+            }
+
+            function showScreen(id) {
+                var screens = document.querySelectorAll(".screen");
+                for (var i = 0; i < screens.length; i++) {
+                    screens[i].classList.remove("active");
+                }
+                el(id).classList.add("active");
+            }
+
+            function escapeHtml(str) {
+                var div = document.createElement("div");
+                div.textContent = str === undefined || str === null ? "" : String(str);
+                return div.innerHTML;
+            }
+
+            // -------- STATE --------
+            var state = {
+                totalQuestions: 0,
+                timeMode: "clock",
+                maxTimeSeconds: 0,
+                testName: "",
+                questions: [],
+                currentIndex: 0,
+                examStartTimestamp: null,
+                examEndTimestamp: null,
+                ticking: false,
+                tickHandle: null,
+                elapsedSeconds: 0,
+                remainingSeconds: 0,
+                lastVisitTimestamp: null
+            };
+
+            function makeQuestion(num) {
+                return {
+                    number: num,
+                    qType: "MCQ",
+                    selected: [],
+                    numericalValue: "",
+                    visited: false,
+                    answered: false,
+                    marked: false,
+                    timeSpent: 0
+                };
+            }
+
+            var OPTION_LETTERS = ["A", "B", "C", "D"];
+            var OPTION_TEXT = {
+                "A": "Option A is the correct answer",
+                "B": "Option B is the correct answer",
+                "C": "Option C is the correct answer",
+                "D": "Option D is the correct answer"
+            };
+
+            // -------- SCREEN 1: SETUP --------
+            var timeModeRadios = document.querySelectorAll('input[name="timeMode"]');
+            for (var i = 0; i < timeModeRadios.length; i++) {
+                timeModeRadios[i].addEventListener("change", function() {
+                    var mode = document.querySelector('input[name="timeMode"]:checked').value;
+                    if (mode === "timed") {
+                        el("timedFields").classList.add("show");
+                    } else {
+                        el("timedFields").classList.remove("show");
+                    }
+                });
+            }
+
+            el("setupNextBtn").addEventListener("click", function() {
+                var errEl = el("setupError");
+                errEl.textContent = "";
+
+                var numQ = parseInt(el("numQuestions").value, 10);
+                if (isNaN(numQ) || numQ < 1) {
+                    errEl.textContent = "Please enter a valid total number of questions (1 or more).";
+                    return;
+                }
+                if (numQ > 500) {
+                    errEl.textContent = "Please keep the number of questions to 500 or fewer.";
+                    return;
+                }
+
+                var mode = document.querySelector('input[name="timeMode"]:checked').value;
+                var maxSeconds = 0;
+                if (mode === "timed") {
+                    var h = clampInt(el("maxHours").value, 0, 23);
+                    var m = clampInt(el("maxMinutes").value, 0, 59);
+                    var s = clampInt(el("maxSeconds").value, 0, 59);
+                    maxSeconds = h * 3600 + m * 60 + s;
+                    if (maxSeconds <= 0) {
+                        errEl.textContent = "Please enter a maximum time greater than 0, or switch to the running clock option.";
+                        return;
+                    }
+                }
+
+                state.totalQuestions = numQ;
+                state.timeMode = mode;
+                state.maxTimeSeconds = maxSeconds;
+
+                state.questions = [];
+                for (var qi = 1; qi <= numQ; qi++) {
+                    state.questions.push(makeQuestion(qi));
+                }
+
+                renderReadySummary();
+                showScreen("readyScreen");
+            });
+
+            // -------- SCREEN 2: READY --------
+            function renderReadySummary() {
+                var html = "";
+                html += "<div><span>Total questions</span><span>" + state.totalQuestions + "</span></div>";
+                if (state.timeMode === "timed") {
+                    html += "<div><span>Maximum time</span><span>" + formatHMS(state.maxTimeSeconds) +
+                        " (HH:MM:SS)</span></div>";
+                    html +=
+                        "<div><span>Timer type</span><span>Countdown &mdash; test auto-submits at 00:00:00</span></div>";
+                } else {
+                    html += "<div><span>Maximum time</span><span>Not set</span></div>";
+                    html += "<div><span>Timer type</span><span>Running digital clock (counts up)</span></div>";
+                }
+                el("readySummary").innerHTML = html;
+            }
+
+            el("readyBackBtn").addEventListener("click", function() {
+                showScreen("setupScreen");
+            });
+
+            el("readyBeginBtn").addEventListener("click", function() {
+                var errEl = el("readyError");
+                errEl.textContent = "";
+                var name = el("testName").value.trim();
+                if (!name) {
+                    errEl.textContent = "Please give this test a name before you begin.";
+                    return;
+                }
+                state.testName = name;
+                beginExam();
+            });
+
+            // -------- SCREEN 3: EXAM --------
+            function beginExam() {
+                el("topbarTestName").textContent = "\u2014 " + state.testName;
+                el("sideTestName").textContent = state.testName;
+                el("sideQuestionCount").textContent = state.totalQuestions + " question(s)";
+
+                state.currentIndex = 0;
+                state.examStartTimestamp = Date.now();
+                state.elapsedSeconds = 0;
+                state.remainingSeconds = state.maxTimeSeconds;
+
+                buildQuestionGrid();
+                loadQuestion(0);
+                setupNumpad();
+                startTicking();
+
+                if (state.timeMode === "timed") {
+                    el("timerLabel").textContent = "Time Left:";
+                    el("clockModal").style.display = "none";
+                } else {
+                    el("timerLabel").textContent = "";
+                    el("timerDisplay").style.display = "none";
+                }
+
+                showScreen("examScreen");
+            }
+
+            function buildQuestionGrid() {
+                var grid = el("qGrid");
+                grid.innerHTML = "";
+                for (var i = 0; i < state.totalQuestions; i++) {
+                    var btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.className = "qbtn";
+                    btn.textContent = (i + 1);
+                    btn.setAttribute("data-index", i);
+                    btn.addEventListener("click", function() {
+                        var idx = parseInt(this.getAttribute("data-index"), 10);
+                        goToQuestion(idx);
+                    });
+                    grid.appendChild(btn);
+                }
+                refreshQuestionGrid();
+            }
+
+            function refreshQuestionGrid() {
+                var buttons = document.querySelectorAll(".qbtn");
+                for (var i = 0; i < buttons.length; i++) {
+                    var idx = parseInt(buttons[i].getAttribute("data-index"), 10);
+                    var q = state.questions[idx];
+                    buttons[i].classList.remove("st-not-answered", "st-answered", "st-marked", "st-answered-marked",
+                        "current");
+                    if (!q.visited) {
+                        // stays default white
+                    } else if (q.answered && q.marked) {
+                        buttons[i].classList.add("st-answered-marked");
+                    } else if (q.marked) {
+                        buttons[i].classList.add("st-marked");
+                    } else if (q.answered) {
+                        buttons[i].classList.add("st-answered");
+                    } else {
+                        buttons[i].classList.add("st-not-answered");
+                    }
+                    if (idx === state.currentIndex) {
+                        buttons[i].classList.add("current");
+                    }
+                }
+            }
+
+            function commitTimeForCurrentQuestion() {
+                if (state.lastVisitTimestamp === null) return;
+                var now = Date.now();
+                var deltaSec = (now - state.lastVisitTimestamp) / 1000;
+                var q = state.questions[state.currentIndex];
+                if (q) q.timeSpent += deltaSec;
+                state.lastVisitTimestamp = now;
+            }
+
+            function loadQuestion(index) {
+                commitTimeForCurrentQuestion();
+
+                state.currentIndex = index;
+                var q = state.questions[index];
+                q.visited = true;
+                state.lastVisitTimestamp = Date.now();
+
+                el("qNumHeader").textContent = "Question No. " + q.number;
+                el("questionText").textContent = "What is correct answer for question '#" + q.number + "'?";
+                el("qProgressLabel").textContent = "Question " + (index + 1) + " of " + state.totalQuestions;
+                el("qTypeBadge").textContent = "Question Type: " + (q.qType === "NT" ? "Numerical (NAT)" : q.qType);
+
+                renderQuestionTypeControls();
+                renderAnswerControls();
+                el("prevBtn").style.visibility = (index === 0) ? "hidden" : "visible";
+                refreshQuestionGrid();
+            }
+
+            function goToQuestion(index) {
+                if (index < 0 || index >= state.totalQuestions) return;
+                loadQuestion(index);
+            }
+
+            function renderQuestionTypeControls() {
+                // placeholder – the actual controls are rendered in renderAnswerControls
+            }
+
+            function renderAnswerControls() {
+                var q = state.questions[state.currentIndex];
+
+                var existingCtrl = document.getElementById("typeControlsBox");
+                if (existingCtrl) existingCtrl.remove();
+
+                var ctrlBox = document.createElement("div");
+                ctrlBox.id = "typeControlsBox";
+                ctrlBox.style.cssText =
+                    "background:#f0f4fa;border:1px solid #c8d6e8;border-radius:3px;padding:10px 14px;margin-bottom:18px;display:flex;gap:24px;flex-wrap:wrap;font-size:13px;";
+
+                ctrlBox.innerHTML =
+                    '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;">' +
+                    '<input type="checkbox" id="isMsqCheckbox"> Is it MSQ type question? (multiple correct options)' +
+                    '</label>' +
+                    '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;">' +
+                    '<input type="checkbox" id="isNumCheckbox"> Is it Numerical type question?' +
+                    '</label>';
+
+                el("questionText").insertAdjacentElement("afterend", ctrlBox);
+
+                var msqBox = el("isMsqCheckbox");
+                var numBox = el("isNumCheckbox");
+                msqBox.checked = (q.qType === "MSQ");
+                numBox.checked = (q.qType === "NT");
+
+                msqBox.addEventListener("change", function() {
+                    if (this.checked) {
+                        numBox.checked = false;
+                        changeQuestionType("MSQ");
+                    } else {
+                        changeQuestionType("MCQ");
+                    }
+                });
+                numBox.addEventListener("change", function() {
+                    if (this.checked) {
+                        msqBox.checked = false;
+                        changeQuestionType("NT");
+                    } else {
+                        changeQuestionType("MCQ");
+                    }
+                });
+
+                renderOptionsOrNumpad();
+            }
+
+            function changeQuestionType(newType) {
+                var q = state.questions[state.currentIndex];
+                if (q.qType === newType) return;
+                q.qType = newType;
+                q.selected = [];
+                q.numericalValue = "";
+                q.answered = false;
+                el("qTypeBadge").textContent = "Question Type: " + (q.qType === "NT" ? "Numerical (NAT)" : q.qType);
+                renderOptionsOrNumpad();
+                refreshQuestionGrid();
+            }
+
+            function renderOptionsOrNumpad() {
+                var q = state.questions[state.currentIndex];
+                var list = el("mcqOptionsList");
+                var numPad = el("numericalPad");
+
+                if (q.qType === "NT") {
+                    list.style.display = "none";
+                    numPad.style.display = "block";
+                    updateNumericalDisplay();
+                    return;
+                }
+
+                numPad.style.display = "none";
+                list.style.display = "block";
+                list.innerHTML = "";
+
+                var inputType = (q.qType === "MSQ") ? "checkbox" : "radio";
+
+                OPTION_LETTERS.forEach(function(letter) {
+                    var li = document.createElement("li");
+                    li.className = "option-item";
+                    li.setAttribute("data-letter", letter);
+
+                    var isSelected = q.selected.indexOf(letter) !== -1;
+                    if (isSelected) li.classList.add("selected");
+
+                    li.innerHTML =
+                        '<input type="' + inputType + '" name="optionGroup" ' + (isSelected ? "checked" : "") + '>' +
+                        '<span class="opt-label">' + letter + '.</span>' +
+                        '<span class="opt-text">' + escapeHtml(OPTION_TEXT[letter]) + '</span>';
+
+                    li.addEventListener("click", function(e) {
+                        var lt = this.getAttribute("data-letter");
+                        toggleOption(lt);
+                    });
+
+                    list.appendChild(li);
+                });
+            }
+
+            function toggleOption(letter) {
+                var q = state.questions[state.currentIndex];
+                if (q.qType === "MSQ") {
+                    var idx = q.selected.indexOf(letter);
+                    if (idx === -1) {
+                        q.selected.push(letter);
+                    } else {
+                        q.selected.splice(idx, 1);
+                    }
+                } else {
+                    q.selected = [letter];
+                }
+                q.answered = q.selected.length > 0;
+                renderOptionsOrNumpad();
+                refreshQuestionGrid();
+            }
+
+            function setupNumpad() {
+                var grid = el("numpadGrid");
+                grid.innerHTML = "";
+                var keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "-"];
+                keys.forEach(function(k) {
+                    var btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.textContent = k;
+                    btn.addEventListener("click", function() {
+                        appendNumericalChar(k);
+                    });
+                    grid.appendChild(btn);
+                });
+
+                el("numBackspace").addEventListener("click", function() {
+                    var q = state.questions[state.currentIndex];
+                    if (q.qType !== "NT") return;
+                    q.numericalValue = q.numericalValue.slice(0, -1);
+                    syncNumericalAnsweredState();
+                    updateNumericalDisplay();
+                });
+                el("numClear").addEventListener("click", function() {
+                    var q = state.questions[state.currentIndex];
+                    if (q.qType !== "NT") return;
+                    q.numericalValue = "";
+                    syncNumericalAnsweredState();
+                    updateNumericalDisplay();
+                });
+
+                document.addEventListener("keydown", function(e) {
+                    var examActive = el("examScreen").classList.contains("active");
+                    if (!examActive) return;
+                    var q = state.questions[state.currentIndex];
+                    if (!q || q.qType !== "NT") return;
+                    var active = document.activeElement;
+                    if (active && (active.id === "keyPad_UserInput")) return;
+                    if (/^[0-9]$/.test(e.key) || e.key === "." || e.key === "-") {
+                        appendNumericalChar(e.key);
+                        e.preventDefault();
+                    } else if (e.key === "Backspace") {
+                        q.numericalValue = q.numericalValue.slice(0, -1);
+                        syncNumericalAnsweredState();
+                        updateNumericalDisplay();
+                        e.preventDefault();
+                    }
+                });
+            }
+
+            function appendNumericalChar(ch) {
+                var q = state.questions[state.currentIndex];
+                if (q.qType !== "NT") return;
+                if (ch === "-" && q.numericalValue.length > 0) return;
+                if (ch === "." && q.numericalValue.indexOf(".") !== -1) return;
+                q.numericalValue += ch;
+                syncNumericalAnsweredState();
+                updateNumericalDisplay();
+            }
+
+            function syncNumericalAnsweredState() {
+                var q = state.questions[state.currentIndex];
+                q.answered = q.numericalValue.length > 0 && q.numericalValue !== "-" && q.numericalValue !== ".";
+            }
+
+            function updateNumericalDisplay() {
+                var q = state.questions[state.currentIndex];
+                el("numericalDisplay").textContent = q.numericalValue.length ? q.numericalValue : "\u00A0";
+            }
+
+            // -------- Action buttons --------
+            el("clearResponseBtn").addEventListener("click", function() {
+                var q = state.questions[state.currentIndex];
+                q.selected = [];
+                q.numericalValue = "";
+                q.answered = false;
+                renderOptionsOrNumpad();
+                refreshQuestionGrid();
+            });
+
+            el("markReviewBtn").addEventListener("click", function() {
+                var q = state.questions[state.currentIndex];
+                syncAnsweredFlag(q);
+                q.marked = true;
+                refreshQuestionGrid();
+                advanceOrStay();
+            });
+
+            el("saveNextBtn").addEventListener("click", function() {
+                var q = state.questions[state.currentIndex];
+                syncAnsweredFlag(q);
+                refreshQuestionGrid();
+                advanceOrStay();
+            });
+
+            el("prevBtn").addEventListener("click", function() {
+                if (state.currentIndex > 0) {
+                    goToQuestion(state.currentIndex - 1);
+                }
+            });
+
+            function syncAnsweredFlag(q) {
+                if (q.qType === "NT") {
+                    syncNumericalAnsweredState();
+                } else {
+                    q.answered = q.selected.length > 0;
+                }
+            }
+
+            function advanceOrStay() {
+                if (state.currentIndex < state.totalQuestions - 1) {
+                    goToQuestion(state.currentIndex + 1);
+                } else {
+                    refreshQuestionGrid();
+                }
+            }
+
+            // -------- Timer --------
+            function startTicking() {
+                state.ticking = true;
+                updateTimerDisplay();
+                state.tickHandle = setInterval(function() {
+                    if (!state.ticking) return;
+                    tick();
+                }, 1000);
+            }
+
+            function tick() {
+                state.elapsedSeconds += 1;
+                commitTimeForCurrentQuestion();
+
+                if (state.timeMode === "timed") {
+                    state.remainingSeconds = state.maxTimeSeconds - state.elapsedSeconds;
+                    if (state.remainingSeconds <= 0) {
+                        state.remainingSeconds = 0;
+                        updateTimerDisplay();
+                        autoEndTest();
+                        return;
+                    }
+                }
+                updateTimerDisplay();
+            }
+
+            function updateTimerDisplay() {
+                if (state.timeMode === "timed") {
+                    var disp = el("timerDisplay");
+                    disp.textContent = formatHMS(state.remainingSeconds);
+                    disp.classList.remove("warning", "danger");
+                    if (state.remainingSeconds <= 60) {
+                        disp.classList.add("danger");
+                    } else if (state.remainingSeconds <= Math.max(120, state.maxTimeSeconds * 0.1)) {
+                        disp.classList.add("warning");
+                    }
+                } else {
+                    var clock = el("clockModal");
+                    clock.style.display = "block";
+                    clock.textContent = formatHMS(state.elapsedSeconds);
+                }
+            }
+
+            function stopTicking() {
+                state.ticking = false;
+                if (state.tickHandle) {
+                    clearInterval(state.tickHandle);
+                    state.tickHandle = null;
+                }
+            }
+
+            function autoEndTest() {
+                endTest(true);
+            }
+
+            // -------- End test --------
+            el("endTestBtn").addEventListener("click", function() {
+                var confirmed = window.confirm("Are you sure you want to end the test? This cannot be undone.");
+                if (confirmed) {
+                    endTest(false);
+                }
+            });
+
+            function endTest(wasAuto) {
+                commitTimeForCurrentQuestion();
+                stopTicking();
+                state.examEndTimestamp = Date.now();
+                el("clockModal").style.display = "none";
+                buildReviewScreen(wasAuto);
+                showScreen("reviewScreen");
+            }
+
+            // -------- SCREEN 4: REVIEW --------
+            function buildReviewScreen(wasAuto) {
+                el("reviewTestName").textContent = state.testName + (wasAuto ? " (auto-submitted: time up)" : "");
+
+                var totalTimeSec = (state.examEndTimestamp - state.examStartTimestamp) / 1000;
+                var answeredCount = 0;
+                var markedCount = 0;
+
+                var tbody = el("reviewTableBody");
+                tbody.innerHTML = "";
+
+                state.questions.forEach(function(q) {
+                    if (q.answered) answeredCount++;
+                    if (q.marked) markedCount++;
+
+                    var responseStr = "";
+                    if (q.qType === "NT") {
+                        responseStr = q.numericalValue;
+                    } else {
+                        responseStr = q.selected.join(",");
+                    }
+
+                    var tr = document.createElement("tr");
+                    tr.innerHTML =
+                        "<td class='q-no'>" + q.number + "</td>" +
+                        "<td>" + escapeHtml(responseStr) + "</td>" +
+                        "<td>" + q.qType + "</td>" +
+                        "<td>" + (q.answered ? "YES" : "NO") + "</td>" +
+                        "<td>" + (q.marked ? "YES" : "NO") + "</td>" +
+                        "<td>" + (q.visited ? "Yes" : "No") + "</td>" +
+                        "<td>" + escapeHtml(formatHumanTime(q.timeSpent)) + "</td>";
+                    tbody.appendChild(tr);
+                });
+
+                el("statTotalQ").textContent = state.totalQuestions;
+                el("statAnswered").textContent = answeredCount;
+                el("statMarked").textContent = markedCount;
+                el("statTotalTime").textContent = formatHumanTime(totalTimeSec);
+
+                state._reviewTotalTimeSec = totalTimeSec;
+            }
+
+            function sanitizeFileName(name) {
+                return name.replace(/[\\\/:*?"<>|]/g, "_").trim() || "test_review";
+            }
+
+            function buildReviewRows() {
+                var rows = [];
+                rows.push(["Total questions:", state.totalQuestions, "", "", "", "", ""]);
+                rows.push(["Total Time taken:", formatHumanTime(state._reviewTotalTimeSec), "", "", "", "", ""]);
+                rows.push(["Question No.", "my response", "question type", "answered?", "Marked for review", "explored",
+                    "time taken"
+                ]);
+                state.questions.forEach(function(q) {
+                    var responseStr = (q.qType === "NT") ? q.numericalValue : q.selected.join(",");
+                    rows.push([
+                        q.number,
+                        responseStr,
+                        q.qType,
+                        q.answered ? "YES" : "NO",
+                        q.marked ? "YES" : "NO",
+                        q.visited ? "Yes" : "No",
+                        formatHumanTime(q.timeSpent)
+                    ]);
+                });
+                return rows;
+            }
+
+            function downloadBlob(content, mime, filename) {
+                var blob = new Blob([content], { type: mime });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement("a");
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+            }
+
+            function csvEscape(val) {
+                var s = String(val === undefined || val === null ? "" : val);
+                if (/[",\n]/.test(s)) {
+                    s = '"' + s.replace(/"/g, '""') + '"';
+                }
+                return s;
+            }
+
+            el("downloadCsvBtn").addEventListener("click", function() {
+                var rows = buildReviewRows();
+                var csv = rows.map(function(r) { return r.map(csvEscape).join(","); }).join("\r\n");
+                downloadBlob(csv, "text/csv;charset=utf-8;", sanitizeFileName(state.testName) + "_review.csv");
+            });
+
+            el("downloadXlsBtn").addEventListener("click", function() {
+                var rows = buildReviewRows();
+                var html = "<html xmlns:x='urn:schemas-microsoft-com:office:excel'><head><meta charset='UTF-8'>";
+                html += "<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>";
+                html += "<x:Name>Review</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>";
+                html += "</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->";
+                html +=
+                    "<style>td,th{font-family:Calibri,Arial,sans-serif;font-size:12px;} th{background:#003366;color:#fff;font-weight:bold;}</style>";
+                html += "</head><body><table border='1'>";
+                rows.forEach(function(r, ri) {
+                    html += "<tr>";
+                    r.forEach(function(cell) {
+                        var tag = (ri === 2) ? "th" : "td";
+                        html += "<" + tag + ">" + escapeHtml(cell) + "</" + tag + ">";
+                    });
+                    html += "</tr>";
+                });
+                html += "</table></body></html>";
+                downloadBlob(html, "application/vnd.ms-excel", sanitizeFileName(state.testName) + "_review.xls");
+            });
+
+            el("restartBtn").addEventListener("click", function() {
+                if (window.confirm("Start a brand new test? Current results will be lost unless already downloaded.")) {
+                    location.reload();
+                }
+            });
+
+            // -------- Calculator open/close (exam + calc integration) --------
+            el("calcOpenBtn").addEventListener("click", function() {
+                el("calcModal").classList.add("show");
+            });
+            el("calcCloseBtn").addEventListener("click", function() {
+                el("calcModal").classList.remove("show");
+            });
+
+            // Make the calculator draggable via its titlebar (pure JS)
+            (function() {
+                var panel = el("calcModal");
+                var handle = el("calcTitlebar");
+                var dx = 0,
+                    dy = 0,
+                    dragging = false;
+                handle.addEventListener("mousedown", function(e) {
+                    dragging = true;
+                    dx = e.clientX - panel.offsetLeft;
+                    dy = e.clientY - panel.offsetTop;
+                    e.preventDefault();
+                });
+                document.addEventListener("mousemove", function(e) {
+                    if (!dragging) return;
+                    panel.style.left = (e.clientX - dx) + "px";
+                    panel.style.top = (e.clientY - dy) + "px";
+                    panel.style.right = "auto";
+                });
+                document.addEventListener("mouseup", function() {
+                    dragging = false;
+                });
+            })();
+
+        })();
+    </script>
+
+    <!-- =============================================================
+    TCS iON SCIENTIFIC CALCULATOR – full oscZenoedited.js logic
+    (uses jQuery, runs in global scope)
+    ============================================================= -->
+    <script>
+        // ---- jQuery is already loaded above ----
+
+        // **********************************************
+        //  TCS iON Calculator – oscZenoedited.js
+        //  (exact logic from the working calculator)
+        // **********************************************
+
+        var strNaN = "NaN";
+        var strInf = "";
+        var oscError;
+        "ERROR";
+        var strMathError = "";
+        var strEmpty = 0;
+        var maxLength = 8;
+        var opCodeArray = [];
+        var stackArray = [];
+        var trigDisplay = "";
+        var openArray = [];
+        var stackVal1 = 1;
+        var stackVal2 = 0;
+
+        var opCode = 0;
+        var stackVal = 0;
+        var memVal = 0;
+        var boolClear = true;
+        var newOpCode = 0;
+        var modeSelected = "deg";
+        var displayString = "";
+        var memory = 0;
+        var trig = 0;
+        var display = "";
+        var afterdec = "";
+        var dS = "";
+        var index;
+
+        $(document).ready(function() {
+            $('.keyPad_TextBox1').focus(function() {
+                this.blur();
+            });
+            $('.keyPad_TextBox').focus(function() {
+                this.blur();
+            });
+
+            $.fn.setCursorPosition = function(pos) {
+                this.each(function(index, elem) {
+                    if (elem.setSelectionRange) {
+                        elem.setSelectionRange(pos, pos);
+                    } else if (elem.createTextRange) {
+                        var range = elem.createTextRange();
+                        range.collapse(true);
+                        range.moveEnd('character', pos);
+                        range.moveStart('character', pos);
+                        range.select();
+                    }
+                });
+                return this;
+            };
+
+            $("[class^=keyPad_]").each(function() {
+                $(this).click(function() {
+                    $('#keyPad_UserInput1').setCursorPosition($('#keyPad_UserInput1').val().length);
+                });
+            });
+
+            var inBox = $('#keyPad_UserInput');
+            var inBox1 = $('#keyPad_UserInput1');
+            var modeSelected = $('input[name=degree_or_radian]:radio:checked').val();
+            $("#keyPad_UserInput").val(strEmpty);
+
+            // NUMERIC KEYS
+            $("div#keyPad a.keyPad_btnNumeric").click(function() {
+                var btnVal = $(this).html();
+                var inBox = $('#keyPad_UserInput');
+                var inBox1 = $('#keyPad_UserInput1');
+                if (false) return;
+                if (boolClear) { inBox.val(strEmpty);
+                    boolClear = false; }
+                var str = inBox.val();
+                if (str.length > maxLength) return;
+                if (this.id == "keyPad_btnDot" && str.indexOf('.') >= 0 && inBox1.val() != "") {
+                    inBox.val(strEmpty + ".");
+                    inBox1.val("");
+                    return;
+                } else if (this.id == "keyPad_btnDot" && str.indexOf('.') >= 0) return;
+                displayCheck();
+                if (str != strEmpty || str.length > 1 || this.id == "keyPad_btnDot") {
+                    inBox.val(str + btnVal);
+                    stackVal1 = 1;
+                } else {
+                    inBox.val(btnVal);
+                    stackVal1 = 1;
+                }
+                inBox.focus();
+            });
+
+            // CONST DATA ENTRY
+            $("a.keyPad_btnConst").click(function() {
+                var retVal = strEmpty;
+                var inputBox = $('#keyPad_UserInput');
+                var inBox1 = $('#keyPad_UserInput1');
+                if (false) return;
+                switch (this.id) {
+                    case 'keyPad_btnPi':
+                        retVal = Math.PI;
+                        break;
+                    case 'keyPad_btnE':
+                        retVal = Math.E;
+                        break;
+                    default:
+                        break;
+                }
+                displayCheck();
+                stackVal1 = 1;
+                boolClear = true;
+                if (retVal != strEmpty) {
+                    $('#keyPad_UserInput').val(retVal);
+                } else {
+                    $('#keyPad_UserInput').val(retVal);
+                }
+                inputBox.focus();
+            });
+
+            // BINARY OPERATION KEY
+            $("div#keyPad a.keyPad_btnBinaryOp").click(function() {
+                if (false) return;
+                switch (this.id) {
+                    case 'keyPad_btnPlus':
+                        stackCheck($("#" + this.id).text());
+                        newOpCode = 1;
+                        if (opCode == 10 && stackArray.length > 0 && stackArray[stackArray.length - 1] == "{")
+                            opcodeChange();
+                        operation();
+                        stackVal1 = 0;
+                        break;
+                    case 'keyPad_btnMinus':
+                        stackCheck($("#" + this.id).text());
+                        newOpCode = 2;
+                        if (opCode == 10 && stackArray.length > 0 && stackArray[stackArray.length - 1] == "{")
+                            opcodeChange();
+                        operation();
+                        stackVal1 = 0;
+                        break;
+                    case 'keyPad_btnMult':
+                        stackCheck($("#" + this.id).text());
+                        newOpCode = 3;
+                        if (opCode == 1 || opCode == 2) { opcodeChange(); }
+                        if (opCode == 10) {
+                            if (opCodeArray[opCodeArray.length - 1] < 3 || (stackArray.length > 0 && stackArray[
+                                    stackArray.length - 1] == "{")) { opcodeChange(); } else { operation(); }
+                        }
+                        stackVal1 = 0;
+                        break;
+                    case 'keyPad_btnDiv':
+                        stackCheck($("#" + this.id).text());
+                        newOpCode = 4;
+                        if (opCode < 4 && opCode) { opcodeChange(); }
+                        if (opCode == 10) {
+                            if (opCodeArray[opCodeArray.length - 1] < 4 || stackVal1 == 5 || (stackArray.length > 0 &&
+                                    stackArray[stackArray.length - 1] == "{")) { opcodeChange(); } else { operation(); }
+                        }
+                        stackVal1 = 0;
+                        break;
+                    case 'keyPad_%':
+                        stackCheck("%");
+                        newOpCode = 11;
+                        if (opCode < 6 && opCode) { opcodeChange(); }
+                        if (opCode == 10) {
+                            if (opCodeArray[opCodeArray.length - 1] < 6 || (stackArray.length > 0 && stackArray[
+                                    stackArray.length - 1] == "{")) { opcodeChange(); } else { operation(); }
+                        }
+                        stackVal1 = 0;
+                        break;
+                    case 'keyPad_EXP':
+                        stackCheck("e+0");
+                        newOpCode = 9;
+                        if (opCode < 6 && opCode) { opcodeChange(); }
+                        if (opCode == 10) {
+                            if (opCodeArray[opCodeArray.length - 1] < 6 || (stackArray.length > 0 && stackArray[
+                                    stackArray.length - 1] == "{")) { opcodeChange(); } else { operation(); }
+                        }
+                        stackVal1 = 1;
+                        stackVal2 = 7;
+                        break;
+                    case 'keyPad_btnYpowX':
+                        stackCheck("^");
+                        newOpCode = 6;
+                        if (opCode < 6 && opCode) { opcodeChange(); }
+                        if (opCode == 10) {
+                            if (opCodeArray[opCodeArray.length - 1] < 6 || (stackArray.length > 0 && stackArray[
+                                    stackArray.length - 1] == "{")) { opcodeChange(); } else { operation(); }
+                        }
+                        stackVal1 = 0;
+                        break;
+                    case 'keyPad_btnMod':
+                        stackCheck($("#" + this.id).text());
+                        newOpCode = 5;
+                        if (opCode == 1 || opCode == 2) { opcodeChange(); }
+                        if (opCode == 10) {
+                            if (opCodeArray[opCodeArray.length - 1] == 1 || 2 || (stackArray.length > 0 && stackArray[
+                                    stackArray.length - 1] == "{")) { opcodeChange(); } else { operation(); }
+                        }
+                        stackVal1 = 0;
+                        break;
+                    case 'keyPad_btnYrootX':
+                        stackCheck("yroot");
+                        newOpCode = 7;
+                        if (opCode < 6 && opCode) { opcodeChange(); }
+                        if (opCode == 10) {
+                            if (opCodeArray[opCodeArray.length - 1] < 6 || (stackArray.length > 0 && stackArray[
+                                    stackArray.length - 1] == "{")) { opcodeChange(); } else { operation(); }
+                        }
+                        stackVal1 = 0;
+                        break;
+                    case 'keyPad_btnYlogX':
+                        stackCheck("logxBasey");
+                        newOpCode = 8;
+                        if (opCode == 1 || opCode == 2) { opcodeChange(); }
+                        if (opCode == 10) {
+                            if (opCodeArray[opCodeArray.length - 1] < 3 || (stackArray.length > 0 && stackArray[
+                                    stackArray.length - 1] == "{")) { opcodeChange(); } else { operation(); }
+                        }
+                        stackVal1 = 0;
+                        break;
+                    case 'keyPad_btnOpen':
+                        displayString = inBox1.val() + $("#" + this.id).text();
+                        newOpCode = 0;
+                        inBox.val(0);
+                        if (opCode != 0) { opcodeChange(); }
+                        openArray.push("{");
+                        stackArray.push("{");
+                        stackVal1 = 1;
+                        break;
+                    case 'keyPad_btnClose':
+                        if (stackVal2 == 6) { stackVal = parseFloat(inBox.val());
+                            displayString = inBox1.val() + inBox.val() + $("#" + this.id).text(); } else if (newOpCode !=
+                            10) {
+                            if (stackVal1 != 3) {
+                                if ((inBox1.val().indexOf("e+0") > -1) && inBox.val().indexOf("-") > -1)
+                                    inBox1.val(inBox1.val().replace("e+0", "e"));
+                                else if ((inBox1.val().indexOf("e+0") > -1))
+                                    inBox1.val(inBox1.val().replace("e+0", "e+"));
+                                displayString = inBox1.val() + inBox.val() + $("#" + this.id).text();
+                            } else
+                                displayString = inBox1.val() + $("#" + this.id).text();
+                        } else {
+                            displayString = inBox1.val() + $("#" + this.id).text();
+                        }
+                        if (openArray[0]) {
+                            openArray.pop();
+                            newOpCode = 10;
+                            while (opCodeArray[0] || openArray[0]) {
+                                if (stackArray[stackArray.length - 1] == "{") {
+                                    stackArray.pop();
+                                    break;
+                                } else {
+                                    oscBinaryOperation();
+                                    stackVal = stackArray[stackArray.length - 1];
+                                    if (stackVal == "{") {
+                                        stackArray.pop();
+                                        opCode = 0;
+                                        break;
+                                    }
+                                    stackArray.pop();
+                                    opCode = opCodeArray[opCodeArray.length - 1];
+                                    opCodeArray.pop();
+                                    if (!opCodeArray[0] && stackArray.length > 0 && stackArray[stackArray.length - 1] !=
+                                        "{") {
+                                        stackVal = stackArray[stackArray.length - 1];
+                                    }
+                                }
+                            }
+                        } else {
+                            return;
+                        }
+                        stackVal2 = 1;
+                        stackVal1 = 5;
+                        break;
+                    case 'keyPad_btnPercent':
+                        if (opCode == 1 || opCode == 2) { inBox.val((stackVal * parseFloat(inBox.val()) / 100)); } else if (
+                            opCode == 3 || opCode == 4) { inBox.val((parseFloat(inBox.val()) / 100)); } else return;
+                        break;
+                    default:
+                        break;
+                }
+                if (opCode) { oscBinaryOperation(); } else { stackVal = parseFloat(inBox.val());
+                    boolClear = true; }
+                opCode = newOpCode;
+                inBox.focus();
+                inBox1.val(displayString);
+            });
+
+            // MEMORY OPERATIONS
+            $("a.keyPad_btnMemoryOp").click(function() {
+                var inputBox = $('#keyPad_UserInput');
+                var x = parseFloat(inputBox.val());
+                if ((inputBox.val()) == "") { x = 0; }
+                var retVal = 0;
+                if (false) return;
+                switch (this.id) {
+                    case 'keyPad_MS':
+                        memory = x;
+                        $("#memory").addClass("memoryshow");
+                        $("#memory").removeClass("memoryhide");
+                        retVal = inBox.val();
+                        break;
+                    case 'keyPad_M+':
+                        memory = x + parseFloat(memory);
+                        $("#memory").addClass("memoryshow");
+                        $("#memory").removeClass("memoryhide");
+                        retVal = inBox.val();
+                        break;
+                    case 'keyPad_MR':
+                        retVal = parseFloat(memory);
+                        stackVal1 = 1;
+                        break;
+                    case 'keyPad_MC':
+                        memory = 0;
+                        $("#memory").removeClass("memoryshow");
+                        $("#memory").addClass("memoryhide");
+                        retVal = inBox.val();
+                        break;
+                    case 'keyPad_M-':
+                        $("#memory").addClass("memoryshow");
+                        $("#memory").removeClass("memoryhide");
+                        memory = parseFloat(memory) - x;
+                        retVal = inBox.val();
+                        break;
+                    default:
+                        break;
+                }
+                if (retVal != strEmpty) {
+                    $('#keyPad_UserInput').val(retVal);
+                } else {
+                    $('#keyPad_UserInput').val(retVal);
+                }
+                boolClear = true;
+                inputBox.focus();
+            });
+
+            function stackCheck(text) {
+                if (stackVal1 == 2) { inBox1.val(""); }
+                if (stackVal1 == 0) {
+                    opCode = 0;
+                    var x = 1;
+                    switch (newOpCode) {
+                        case 5:
+                            x = 3;
+                            break;
+                        case 7:
+                            x = 5;
+                            break;
+                        case 8:
+                            x = 9;
+                            break;
+                        default:
+                            break;
+                    }
+                    if (!(inBox1.val().indexOf("e+") > -1))
+                        inBox1.val(inBox1.val().substring(0, inBox1.val().length - x));
+                    stackVal2 = 2;
+                }
+                if (stackVal1 == 5 || stackVal2 == 2) {
+                    stackVal2 = 0;
+                    displayString = inBox1.val() + text;
+                } else {
+                    if ((inBox1.val().indexOf("e+0") > -1) && inBox.val().indexOf("-") > -1)
+                        inBox1.val(inBox1.val().replace("e+0", "e"));
+                    else if ((inBox1.val().indexOf("e+0") > -1))
+                        inBox1.val(inBox1.val().replace("e+0", "e+"));
+                    displayString = inBox1.val() + inBox.val() + text;
+                }
+            }
+
+            function operation() {
+                while (opCodeArray[0] && opCode) {
+                    if (opCode == 10) {
+                        opCode = opCodeArray[opCodeArray.length - 1];
+                        stackVal = stackArray[stackArray.length - 1];
+                        if (newOpCode == 1 || newOpCode == 2 || newOpCode <= opCode) {
+                            opCodeArray.pop();
+                            stackArray.pop();
+                        } else {
+                            opCode = 0;
+                            break;
+                        }
+                    } else if (stackArray[stackArray.length - 1] == "{") {
+                        break;
+                    } else {
+                        oscBinaryOperation();
+                        stackVal = stackArray[stackArray.length - 1];
+                        if (stackVal == "{") {
+                            opCode = 0;
+                            break;
+                        }
+                        opCode = opCodeArray[opCodeArray.length - 1];
+                        if (newOpCode == 1 || newOpCode == 2 || newOpCode <= opCode) {
+                            opCodeArray.pop();
+                            stackArray.pop();
+                        } else {
+                            opCode = 0;
+                            break;
+                        }
+                        if (!opCodeArray[0] && stackArray.length > 0 && stackArray[stackArray.length - 1] != "{") {
+                            stackVal = stackArray[stackArray.length - 1];
+                        }
+                    }
+                }
+            }
+
+            function opcodeChange() {
+                if (opCode != 10 && opCode != 0) {
+                    opCodeArray.push(opCode);
+                    stackArray.push(stackVal);
+                }
+                if (opCode == 0) {
+                    stackArray.push(stackVal);
+                }
+                opCode = 0;
+            }
+
+            function displayCheck() {
+                switch (stackVal1) {
+                    case 2:
+                        inBox1.val("");
+                        break;
+                    case 3:
+                        inBox1.val(inBox1.val().substring(0, inBox1.val().length - trigDisplay.length));
+                        stackVal2 = 4;
+                        break;
+                    case 5:
+                        var string = "";
+                        for (var i = openArray.length; i >= 0; i--) {
+                            string = string + displayString.substring(0, displayString.indexOf("(") + 1);
+                            displayString = displayString.replace(string, "");
+                        }
+                        displayString = string.substring(0, string.lastIndexOf("("));
+                        inBox1.val(displayString);
+                        stackVal2 = 6;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            function oscBinaryOperation() {
+                var inBox = $('#keyPad_UserInput');
+                var x2 = parseFloat(inBox.val());
+                var retVal = 0;
+                switch (opCode) {
+                    case 9:
+                        stackVal = parseFloat(stackVal) * Math.pow(10, x2);
+                        break;
+                    case 1:
+                        stackVal += x2;
+                        break;
+                    case 2:
+                        stackVal -= x2;
+                        break;
+                    case 3:
+                        stackVal *= x2;
+                        break;
+                    case 4:
+                        stackVal /= x2;
+                        break;
+                    case 6:
+                        var precisioncheck = stackVal;
+                        stackVal = Math.pow(stackVal, x2);
+                        if (precisioncheck == 10 && stackVal % 10 != 0 && (Math.abs(stackVal) < 0.00000001 || Math.abs(
+                                stackVal) > 100000000) && x2 % 1 == 0)
+                            stackVal = stackVal.toPrecision(7);
+                        break;
+                    case 5:
+                        stackVal = stackVal % x2;
+                        break;
+                    case 7:
+                        stackVal = nthroot(stackVal, x2);
+                        break;
+                    case 8:
+                        stackVal = Math.log(stackVal) / Math.log(x2);
+                        break;
+                    case 11:
+                        stackVal = stackVal / 100 * x2;
+                        break;
+                    case 0:
+                        stackVal = x2;
+                    default:
+                        break;
+                }
+                retVal = stackVal;
+                if (Math.abs(retVal) < 0.00000001 || Math.abs(retVal) > 100000000) {} else {
+                    if (retVal.toFixed(8) % 1 != 0) {
+                        var i = 1;
+                        while (i < 10) {
+                            if ((retVal.toFixed(i) != 0) && (retVal.toFixed(i) / retVal.toFixed(i + 8) == 1)) {
+                                retVal = retVal.toFixed(i);
+                                break;
+                            } else { i++; }
+                        }
+                    } else { retVal = retVal.toFixed(0); }
+                }
+                inBox.val(retVal);
+                boolClear = true;
+                trig = 0;
+                inBox.focus();
+            }
+
+            // UNARY OPERATIONS
+            $("a.keyPad_btnUnaryOp").click(function() {
+                var inputBox = $('#keyPad_UserInput');
+                var x = parseFloat(inputBox.val());
+                var retVal = oscError;
+                if (false) return;
+                switch (this.id) {
+                    case 'keyPad_btnInverseSign':
+                        retVal = -x;
+                        trig = 1;
+                        stackVal2 = 3;
+                        break;
+                    case 'keyPad_btnInverse':
+                        retVal = 1 / x;
+                        displayTrignometric("reciproc", x);
+                        break;
+                    case 'keyPad_btnSquare':
+                        retVal = x * x;
+                        displayTrignometric("sqr", x);
+                        break;
+                    case 'keyPad_btnSquareRoot':
+                        retVal = Math.sqrt(x);
+                        displayTrignometric("sqrt", x);
+                        break;
+                    case 'keyPad_btnCube':
+                        retVal = x * x * x;
+                        displayTrignometric("cube", x);
+                        break;
+                    case 'keyPad_btnCubeRoot':
+                        retVal = nthroot(x, 3);
+                        displayTrignometric("cuberoot", x);
+                        break;
+                    case 'keyPad_btnLn':
+                        retVal = Math.log(x);
+                        displayTrignometric($("#" + this.id).text(), x);
+                        break;
+                    case 'keyPad_btnLg':
+                        retVal = Math.log(x) / Math.LN10;
+                        displayTrignometric($("#" + this.id).text(), x);
+                        break;
+                    case 'keyPad_btnExp':
+                        retVal = Math.exp(x);
+                        displayTrignometric("powe", x);
+                        break;
+                    case 'keyPad_btnSin':
+                        retVal = sinCalc(modeSelected, x);
+                        modeText($("#" + this.id).text(), x);
+                        trig = 1;
+                        break;
+                    case 'keyPad_btnCosin':
+                        retVal = cosCalc(modeSelected, x);
+                        modeText($("#" + this.id).text(), x);
+                        trig = 1;
+                        break;
+                    case 'keyPad_btnTg':
+                        retVal = tanCalc(modeSelected, x);
+                        modeText($("#" + this.id).text(), x);
+                        trig = 1;
+                        break;
+                    case 'keyPad_btnFact':
+                        retVal = factorial(x);
+                        displayTrignometric("fact", x);
+                        break;
+                    case 'keyPad_btn10X':
+                        retVal = Math.pow(10, x);
+                        if (retVal % 10 != 0 && (Math.abs(retVal) < 0.00000001 || Math.abs(retVal) > 100000000) && (x % 1 ==
+                            0))
+                            retVal = retVal.toPrecision(7);
+                        displayTrignometric("powten", x);
+                        break;
+                    case 'keyPad_btnAsinH':
+                        retVal = inverseSineH(x);
+                        modeText($("#" + this.id).text(), x);
+                        break;
+                    case 'keyPad_btnAcosH':
+                        retVal = Math.log(x + Math.sqrt(x + 1) * Math.sqrt(x - 1));
+                        modeText($("#" + this.id).text(), x);
+                        break;
+                    case 'keyPad_btnAtanH':
+                        retVal = 0.5 * (Math.log(1 + x) - Math.log(1 - x));
+                        modeText($("#" + this.id).text(), x);
+                        break;
+                    case 'keyPad_btnAbs':
+                        retVal = Math.abs(x);
+                        displayTrignometric("abs", x);
+                        break;
+                    case 'keyPad_btnLogBase2':
+                        retVal = Math.log(x) / Math.log(2);
+                        displayTrignometric("logXbase2", x);
+                        break;
+                    case 'keyPad_btnAsin':
+                        retVal = sinInvCalc(modeSelected, x);
+                        modeText("asin", x);
+                        trig = 1;
+                        break;
+                    case 'keyPad_btnAcos':
+                        retVal = cosInvCalc(modeSelected, x);
+                        modeText("acos", x);
+                        trig = 1;
+                        break;
+                    case 'keyPad_btnAtan':
+                        retVal = tanInvCalc(modeSelected, x);
+                        modeText("atan", x);
+                        trig = 1;
+                        break;
+                    case 'keyPad_btnSinH':
+                        retVal = (Math.pow(Math.E, x) - Math.pow(Math.E, -x)) / 2;
+                        modeText($("#" + this.id).text(), x);
+                        break;
+                    case 'keyPad_btnCosinH':
+                        retVal = (Math.pow(Math.E, x) + Math.pow(Math.E, -x)) / 2;
+                        modeText($("#" + this.id).text(), x);
+                        break;
+                    case 'keyPad_btnTgH':
+                        retVal = (Math.pow(Math.E, x) - Math.pow(Math.E, -x));
+                        retVal /= (Math.pow(Math.E, x) + Math.pow(Math.E, -x));
+                        modeText($("#" + this.id).text(), x);
+                        break;
+                    default:
+                        break;
+                }
+
+                if (stackVal2 == 1) { stackVal = retVal; }
+                if (stackVal2 != 3) { stackVal2 = 2; }
+                stackVal1 = 3;
+                boolClear = true;
+                if (retVal == 0 || retVal == strMathError || retVal == strInf) {
+                    inputBox.val(0);
+                } else if ((Math.abs(retVal) < 0.00000001 || Math.abs(retVal) > 100000000) && trig != 1) {} else {
+                    if (retVal.toFixed(8) % 1 != 0) {
+                        var i = 1;
+                        while (i < 10) {
+                            if ((retVal.toFixed(i) != 0) && (retVal.toFixed(i) / retVal.toFixed(i + 8) == 1)) {
+                                retVal = retVal.toFixed(i);
+                                break;
+                            } else { i++; }
+                        }
+                    } else { retVal = retVal.toFixed(0); }
+                }
+                if (retVal == -0) retVal = 0;
+                inputBox.val(retVal);
+                trig = 0;
+                inBox1.val(displayString);
+                inputBox.focus();
+            });
+
+            $("div.degree_radian").click(function() {
+                modeSelected = $('input[name=degree_or_radian]:radio:checked').val();
+            });
+
+            function inverseSineH(inputVal) {
+                return Math.log(inputVal + Math.sqrt(inputVal * inputVal + 1));
+            }
+
+            function modeText(text, x) {
+                var mode = "d";
+                if (modeSelected != "deg") { mode = "r"; }
+                displayTrignometric(text + mode, x);
+            }
+
+            function displayTrignometric(text, x) {
+                if (stackVal2 == 1) {
+                    var string = "";
+                    for (var i = openArray.length; i >= 0; i--) {
+                        string = string + displayString.substring(0, displayString.lastIndexOf("(") + 1);
+                        displayString = displayString.replace(string, "");
+                    }
+                    displayString = string.substring(0, string.lastIndexOf("("));
+                    trigDisplay = text + "(" + x + ")";
+                }
+                if (stackVal2 == 2 || stackVal1 == 3) {
+                    if (stackVal2 == 3) { trigDisplay = text + "(" + x + ")";
+                        stackVal2 = 2; } else {
+                        displayString = displayString.replace(trigDisplay, "");
+                        trigDisplay = text + "(" + trigDisplay + ")";
+                    }
+                } else { if (stackVal2 == 4) { displayString = ""; }
+                    trigDisplay = text + "(" + x + ")"; }
+                displayString = displayString + trigDisplay;
+            }
+
+            function nthroot(x, n) {
+                try {
+                    var negate = n % 2 == 1 && x < 0;
+                    if (negate) x = -x;
+                    var possible = Math.pow(x, 1 / n);
+                    n = Math.pow(possible, n);
+                    if (Math.abs(x - n) < 1 && (x > 0 == n > 0))
+                        return (negate ? -possible : possible);
+                    else return (negate ? -possible : possible);
+                } catch (e) {}
+            }
+
+            function changeXBasedOnMode(mode, inputValue) {
+                if (mode == "deg") {
+                    return (inputValue * (Math.PI / 180));
+                } else if (mode == "rad") {
+                    return inputValue;
+                }
+            }
+
+            function tanCalc(mode, inputVal) {
+                var ipVal = changeXBasedOnMode(mode, inputVal);
+                if (ipVal % (Math.PI / 2) == "0") {
+                    if ((ipVal / (Math.PI / 2)) % 2 == "0") { return "0"; } else { return strMathError; }
+                } else { return Math.tan(ipVal); }
+            }
+
+            function cosCalc(mode, inputVal) {
+                var ipVal = changeXBasedOnMode(mode, inputVal);
+                if (ipVal.toFixed(8) % (Math.PI / 2).toFixed(8) == "0") {
+                    if ((ipVal.toFixed(8) / (Math.PI / 2)).toFixed(8) % 2 == "0") { return Math.cos(ipVal); } else { return
+                            "0"; }
+                } else { return Math.cos(ipVal); }
+            }
+
+            function sinCalc(mode, inputVal) {
+                var ipVal = changeXBasedOnMode(mode, inputVal);
+                if ((ipVal.toFixed(8) % Math.PI).toFixed(8) == 0) { return "0"; } else { return Math.sin(ipVal); }
+            }
+
+            function sinInvCalc(mode, inputVal) {
+                var opVal;
+                var ipVal = Math.asin(inputVal);
+                if (strNaN.indexOf(ipVal.toFixed(8)) > -1) { opVal = strMathError; } else { opVal = changeValOfInvBasedOnMode(
+                        mode, ipVal); }
+                return opVal;
+            }
+
+            function cosInvCalc(mode, inputVal) {
+                var opVal;
+                var ipVal = Math.acos(inputVal);
+                if (strNaN.indexOf(ipVal.toFixed(8)) > -1) { opVal = strMathError; } else { opVal = changeValOfInvBasedOnMode(
+                        mode, ipVal); }
+                return opVal;
+            }
+
+            function tanInvCalc(mode, inputVal) {
+                var opVal;
+                var ipVal = Math.atan(inputVal);
+                if (strNaN.indexOf(ipVal.toFixed(8)) > -1) { opVal = strMathError; } else { opVal = changeValOfInvBasedOnMode(
+                        mode, ipVal); }
+                return opVal;
+            }
+
+            function changeValOfInvBasedOnMode(mode, ipVal) {
+                if (mode == 'deg') { return (180 / Math.PI) * ipVal; } else { return ipVal; }
+            }
+
+            // COMMAND aS: BACKSPACE, CLEAR, ALL CLEAR, ENTER
+            $("div#keyPad a.keyPad_btnCommand").click(function() {
+                var inBox = $('#keyPad_UserInput');
+                var inBox1 = $('#keyPad_UserInput1');
+                var i = 0;
+                var j = 0;
+                var strInput = inBox.val();
+                switch (this.id) {
+                    case 'keyPad_btnEnter':
+                        if (false) return;
+                        while (opCode || opCodeArray[0]) {
+                            if (stackArray[stackArray.length - 1] == "{") { stackArray.pop(); }
+                            oscBinaryOperation();
+                            stackVal = stackArray[stackArray.length - 1];
+                            opCode = opCodeArray[opCodeArray.length - 1];
+                            stackArray.pop();
+                            opCodeArray.pop();
+                        };
+                        opCode = 0;
+                        inBox.focus();
+                        displayString = "";
+                        trigDisplay = "";
+                        stackVal = strEmpty;
+                        openArray = [];
+                        if (stackVal1 != 2) {
+                            if (stackVal1 == 3 || stackVal2 == 1) {
+                                if (stackVal2 != 3) strInput = "";
+                            }
+                            if (newOpCode == 9) {
+                                if (strInput.indexOf("-") > -1) { inBox1.val(inBox1.val().substring(0, inBox1.val()
+                                    .lastIndexOf("+"))); } else { inBox1.val(inBox1.val().replace("e+0", "e+")); }
+                            }
+                            inBox1.val(inBox1.val() + strInput);
+                        }
+                        stackVal1 = 2;
+                        newOpCode = 0;
+                        stackVal2 = 0;
+                        stackArray = [];
+                        opCodeArray = [];
+                        return;
+                    case 'keyPad_btnClr':
+                        if (false) return;
+                        if (strInput == strEmpty) { opCode = 0;
+                            boolClear = false; } else { inBox.val(strEmpty); }
+                        break;
+                    case 'keyPad_btnBack':
+                        if (stackVal1 == 1 || stackVal2 == 3) {
+                            if (strInput.length > 1) {
+                                if (false) return;
+                                inBox.val(strInput.substring(0, strInput.length - 1));
+                                if (inBox.val() == "-") inBox.val("0");
+                                break;
+                            } else { inBox.val("0"); break; }
+                        } else break;
+                    case 'keyPad_btnAllClr':
+                        inBox.val(strEmpty);
+                        displayString = "";
+                        trigDisplay = "";
+                        stackArray = [];
+                        opCodeArray = [];
+                        openArray = [];
+                        inBox1.val("");
+                        stackVal = strEmpty;
+                        stackVal1 = 1;
+                        stackVal2 = 0;
+                        newOpCode = 0;
+                        opCode = 0;
+                        break;
+                    default:
+                        break;
+                }
+            });
+        });
+
+        // Factorial & Gamma
+        function factorial(n) {
+            if (n > 170) return strInf;
+            if (n == 1 || n == 0) return 1;
+            else if (n < 0) return strMathError;
+            else if (n % 1 != 0) return gamma(n + 1);
+            else return n * factorial(n - 1);
+        }
+
+        function gamma(n) {
+            var g = 7,
+                p = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059,
+                    12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7
+                ];
+            if (n < 0.5) {
+                return Math.PI / Math.sin(n * Math.PI) / gamma(1 - n);
+            } else {
+                n--;
+                var x = p[0];
+                for (var i = 1; i < g + 2; i++) {
+                    x += p[i] / (n + i);
+                }
+                var t = n + g + 0.5;
+                return Math.sqrt(2 * Math.PI) * Math.pow(t, (n + 0.5)) * Math.exp(-t) * x;
+            }
+        }
+
+        // After the calculator logic, ensure the close button works (already defined above)
+        // Also ensure the draggable works (already defined above in the exam code)
+        // We re-attach the close/draggable here for safety
+        $(document).ready(function() {
+            // close button
+            $('#calcCloseBtn').on('click', function() {
+                $('#calcModal').removeClass('show');
+            });
+            // open button – already wired in exam code, but re-wire here too for safety
+            $('#calcOpenBtn').on('click', function() {
+                $('#calcModal').addClass('show');
+            });
+        });
+    </script>
+
+</body>
+</html>
